@@ -1,0 +1,890 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>✨ Happy Birthday Jenipaa! ✨</title>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #0a0a0a;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: 'Segoe UI', 'Poppins', sans-serif;
+            overflow: hidden;
+            position: relative;
+            padding: 20px;
+        }
+
+        /* ===== BLACK HOLE CANVAS (di belakang timer) ===== */
+        #blackHoleCanvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+        }
+
+        /* ===== OVERLAY VIGNETTE ===== */
+        #vignette {
+            position: fixed;
+            inset: 0;
+            background: radial-gradient(circle, transparent 50%, black 150%);
+            pointer-events: none;
+            z-index: 5;
+        }
+
+        /* ===== TIMER OVERLAY ===== */
+        #timerOverlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 100;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            transition: opacity 1.5s ease;
+            background: rgba(10, 10, 10, 0.4);
+            backdrop-filter: blur(4px);
+        }
+
+        #timerOverlay.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .timer-content {
+            text-align: center;
+            color: white;
+            padding: 20px;
+            max-width: 600px;
+            width: 100%;
+            position: relative;
+            z-index: 10;
+        }
+
+        .timer-content .lock-icon {
+            font-size: 4rem;
+            margin-bottom: 15px;
+            display: block;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        .timer-content h1 {
+            font-size: 2.2rem;
+            font-weight: 700;
+            color: #ff69b4;
+            margin-bottom: 8px;
+            text-shadow: 0 0 40px rgba(255, 105, 180, 0.3);
+        }
+
+        .timer-content .sub-text {
+            font-size: 1.1rem;
+            color: rgba(255, 255, 255, 0.5);
+            margin-bottom: 30px;
+        }
+
+        .timer-content .sub-text span {
+            color: #ff69b4;
+            font-weight: 600;
+        }
+
+        /* ===== COUNTDOWN ===== */
+        .countdown {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .countdown-item {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 105, 180, 0.15);
+            border-radius: 16px;
+            padding: 16px 20px;
+            min-width: 80px;
+            text-align: center;
+            backdrop-filter: blur(10px);
+        }
+
+        .countdown-item .number {
+            font-size: 3rem;
+            font-weight: 700;
+            color: #ff69b4;
+            font-family: 'Courier New', monospace;
+            display: block;
+            line-height: 1.2;
+        }
+
+        .countdown-item .label {
+            font-size: 0.75rem;
+            color: rgba(255, 255, 255, 0.4);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-top: 4px;
+        }
+
+        /* ===== PROGRESS BAR ===== */
+        .progress-wrapper {
+            width: 100%;
+            max-width: 400px;
+            margin: 0 auto 20px;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.06);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .progress-bar .fill {
+            height: 100%;
+            background: linear-gradient(90deg, #ff69b4, #ff1493);
+            border-radius: 10px;
+            width: 0%;
+            transition: width 0.5s ease;
+        }
+
+        .progress-text {
+            text-align: center;
+            font-size: 0.85rem;
+            color: rgba(255, 255, 255, 0.25);
+            margin-top: 8px;
+        }
+
+        .timer-content .status-text {
+            font-size: 1rem;
+            color: rgba(255, 255, 255, 0.3);
+            margin-top: 10px;
+        }
+
+        .timer-content .status-text .highlight {
+            color: #ff69b4;
+        }
+
+        /* ==========================================
+           KONTEN UTAMA (muncul pas waktu H)
+           ========================================== */
+        #mainContent {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        #mainContent.show {
+            display: flex;
+        }
+
+        .content-card {
+            max-width: 720px;
+            width: 100%;
+            max-height: 90vh;
+            background: rgba(10, 10, 10, 0.8);
+            backdrop-filter: blur(16px);
+            border-radius: 40px 16px 40px 16px;
+            border: 1.5px solid rgba(255, 105, 180, 0.25);
+            padding: 35px 30px 40px;
+            box-shadow: 0 0 60px rgba(255, 105, 180, 0.08);
+            overflow-y: auto;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(255, 105, 180, 0.3) transparent;
+        }
+
+        .content-card::-webkit-scrollbar {
+            width: 4px;
+        }
+        .content-card::-webkit-scrollbar-thumb {
+            background: rgba(255, 105, 180, 0.3);
+            border-radius: 10px;
+        }
+
+        .text {
+            font-size: 1rem;
+            line-height: 1.9;
+            color: rgba(255, 255, 255, 0.85);
+            text-align: left;
+            padding: 0 4px;
+        }
+
+        .text .nama {
+            font-weight: 700;
+            color: #ff69b4;
+            font-size: 1.1rem;
+        }
+
+        .text .highlight {
+            color: #ff69b4;
+            font-weight: 700;
+        }
+
+        .text .sign {
+            display: block;
+            text-align: right;
+            margin-top: 16px;
+            color: #ff69b4;
+            font-weight: 600;
+            font-size: 1.05rem;
+        }
+
+        .text-center {
+            text-align: center;
+        }
+
+        .spotify-wrapper {
+            margin: 20px 0 18px;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 4px 30px rgba(255, 105, 180, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            text-align: center;
+        }
+
+        .spotify-wrapper iframe {
+            display: block;
+            width: 100%;
+            max-width: 400px;
+            height: 352px;
+            border: none;
+            margin: 0 auto;
+            border-radius: 12px;
+        }
+
+        /* ===== MATRIX CANVAS (buat halaman utama) ===== */
+        #matrixCanvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            display: none;
+        }
+
+        #matrixCanvas.show {
+            display: block;
+        }
+
+        @media (max-width: 600px) {
+            .content-card {
+                padding: 22px 16px 28px;
+                border-radius: 32px 12px 32px 12px;
+                max-height: 92vh;
+            }
+            .text {
+                font-size: 0.9rem;
+                line-height: 1.8;
+            }
+            .spotify-wrapper iframe {
+                height: 280px;
+                max-width: 100%;
+            }
+            .countdown {
+                gap: 10px;
+            }
+            .countdown-item {
+                padding: 12px 14px;
+                min-width: 60px;
+            }
+            .countdown-item .number {
+                font-size: 2rem;
+            }
+            .timer-content h1 {
+                font-size: 1.6rem;
+            }
+        }
+
+        @media (max-width: 400px) {
+            .content-card {
+                padding: 16px 12px 20px;
+            }
+            .text {
+                font-size: 0.82rem;
+            }
+            .countdown-item {
+                padding: 8px 10px;
+                min-width: 50px;
+            }
+            .countdown-item .number {
+                font-size: 1.5rem;
+            }
+            .spotify-wrapper iframe {
+                height: 240px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ===== BLACK HOLE CANVAS (background timer) ===== -->
+    <div id="blackHoleCanvas"></div>
+
+    <!-- ===== VIGNETTE ===== -->
+    <div id="vignette"></div>
+
+    <!-- ===== MATRIX CANVAS (background utama) ===== -->
+    <canvas id="matrixCanvas"></canvas>
+
+    <!-- ===== TIMER OVERLAY ===== -->
+    <div id="timerOverlay">
+        <div class="timer-content">
+            <span class="lock-icon">🔒</span>
+            <h1>⏳ Sedang Dipersiapkan</h1>
+            <p class="sub-text">
+                Website ini akan terbuka pada <br>
+                <span id="targetDateText">20 Juni 2026, 00:00</span>
+            </p>
+
+            <div class="countdown">
+                <div class="countdown-item">
+                    <span class="number" id="days">00</span>
+                    <span class="label">Hari</span>
+                </div>
+                <div class="countdown-item">
+                    <span class="number" id="hours">00</span>
+                    <span class="label">Jam</span>
+                </div>
+                <div class="countdown-item">
+                    <span class="number" id="minutes">00</span>
+                    <span class="label">Menit</span>
+                </div>
+                <div class="countdown-item">
+                    <span class="number" id="seconds">00</span>
+                    <span class="label">Detik</span>
+                </div>
+            </div>
+
+            <div class="progress-wrapper">
+                <div class="progress-bar">
+                    <div class="fill" id="progressFill"></div>
+                </div>
+                <div class="progress-text" id="progressText">Menunggu waktu yang tepat...</div>
+            </div>
+
+            <p class="status-text">
+                ❤️ Ditunggu ya, <span class="highlight">Jenipaa</span>! ❤️
+            </p>
+        </div>
+    </div>
+
+    <!-- ===== KONTEN UTAMA ===== -->
+    <div id="mainContent">
+        <div class="content-card">
+
+            <!-- SPOTIFY -->
+            <div class="spotify-wrapper">
+                <iframe 
+                    src="https://open.spotify.com/embed/track/4rcuS31IcZynp91dqvmhmA?utm_source=generator&si=a2ebe198c4f64beb&t=139" 
+                    allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" 
+                    loading="lazy"
+                    title="Spotify Player"
+                ></iframe>
+            </div>
+
+            <div class="text text-center">
+                <span class="nama">🎵 play dulu musiknya jenn!</span>
+            </div>
+
+            <br><br><br><br><br><br><br><br><br><br>
+            <br><br><br><br><br><br><br><br><br><br>
+
+            <div class="text text-center">
+                <span class="nama">⬇️ scroll kebawah jen!</span>
+            </div>
+
+            <br><br><br><br><br><br><br><br><br><br>
+            <br><br><br><br><br><br><br><br><br><br>
+
+            <div class="text text-center">
+                <span class="nama">📖 baca pelan-pelan yahhh</span>
+            </div>
+
+            <br><br><br><br><br><br><br><br><br><br>
+            <br><br><br><br><br><br><br><br><br><br>
+
+            <!-- TEXT PANJANG -->
+            <div class="text">
+                <span class="nama">haiiii jenifaaa</span><br>
+                hari inii kamu ulang tahunnn yaaahhh,<br>
+                <span class="highlight">CONGRATULATIONS 🥳🥳🫵 YAAAAA.</span><br><br>
+
+                Hari ini,<br>
+                Adalah hari dimana manusia paling baikkk di lahirkan ke duniaaaa<br>
+                selamat hari lahirrr <span class="nama">jEnifAaaAaa</span> 🌷✨🎀<br><br>
+
+                happy level up day!!! make a wish for ur b'day, tahun ini umur kamu bertambah<br>
+                satu tahun dan jatah hidup kamu berkurang satu tahun juga semoga kamu selalu sehat,<br>
+                kamu sekarang makin dewasa, apapun yang kamu inginkan semoga bisa terjadi.<br>
+                Terima kasih sudah sekuat ini dan bertahan hidup, banyak hal yang sudah kamu<br>
+                laluin dan masih banyak hal yang belum kamu laluin Semakin kamu dewasa<br>
+                semakin banyak juga rintangannya but it's okayyy karena masih banyak orang yang<br>
+                sayang sama kamu, apapun susahnya apapun sedihnya apapun senangnya<br>
+                kamu nikmatin dan bersyukur. 🙇‍♂️🤍<br><br>
+
+                Dengan bertambahnya usia yang kamu miliki pertanda,<br>
+                bahwa Tuhan memberkati setiap langkahmu,<br>
+                Selamat berpetualang di level kehidupan selanjutnya. setelah<br>
+                ini aku harap kamu menjalankan kehidupan dengan sebaik<br>
+                mungkin, apapun yang sudah kamu lewati jadikan pelajaran<br>
+                untuk menapaki kehidupan yang akan datang. 🌷💗✨<br><br>
+
+                Semoga banyak kebahagiaan yang kembali dari hari ini Semoga semua harapan<br>
+                yang diinginkn menjadi kenyataan Semoga akan ada banyak kebahagiaan yang datang ke<br>
+                dalam hidupmu Semoga harimu jauh lebih menyenangkan sesuai dengan harapanmu.<br>
+                Sekali lagi selamat ulang tahun yaa 🥳🥳💫💫<br><br>
+
+                terima kasih sudah menjadi kuat selama ini walaupun awalnya di kuat-kuat in<br>
+                aja dan selanjutnya harus selalu kuat, ceria dan bahagia yaaa 🎉🎉🎉🎀🎀<br><br>
+
+                <span class="sign">-Pian bokem to Jenipaa princesss 👑</span>
+            </div>
+
+            <br><br>
+
+        </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- BLACK HOLE ANIMATION (Three.js) -->
+    <!-- ========================================== -->
+    <script async src="https://unpkg.com/es-module-shims@1.8.0/dist/es-module-shims.js"></script>
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+                "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/",
+                "gsap": "https://unpkg.com/gsap@3.12.5/index.js"
+            }
+        }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import gsap from 'gsap';
+
+        // ==========================================
+        // SETUP THREE.JS
+        // ==========================================
+        const container = document.getElementById('blackHoleCanvas');
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(60, 30, 60);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 1.6;
+        container.appendChild(renderer.domElement);
+
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.03;
+        controls.autoRotate = true;
+        controls.autoRotateSpeed = 0.4;
+
+        // ==========================================
+        // NOISE SHADER
+        // ==========================================
+        const noiseChunk = `
+            vec3 mod289(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
+            vec4 mod289(vec4 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
+            vec4 permute(vec4 x) { return mod289(((x*34.0)+1.0)*x); }
+            vec4 taylorInvSqrt(vec4 r) { return 1.79284291400159 - 0.85373472095314 * r; }
+            float snoise(vec3 v) {
+                const vec2  C = vec2(1.0/6.0, 1.0/3.0) ;
+                const vec4  D = vec4(0.0, 0.5, 1.0, 2.0);
+                vec3 i  = floor(v + dot(v, C.yyy) );
+                vec3 x0 = v - i + dot(i, C.xxx) ;
+                vec3 g = step(x0.yzx, x0.xyz);
+                vec3 l = 1.0 - g;
+                vec3 i1 = min( g.xyz, l.zxy );
+                vec3 i2 = max( g.xyz, l.zxy );
+                vec3 x1 = x0 - i1 + C.xxx;
+                vec3 x2 = x0 - i2 + C.yyy;
+                vec3 x3 = x0 - D.yyy;
+                i = mod289(i);
+                vec4 p = permute( permute( permute( i.z + vec4(0.0, i1.z, i2.z, 1.0 )) + i.y + vec4(0.0, i1.y, i2.y, 1.0 )) + i.x + vec4(0.0, i1.x, i2.x, 1.0 ));
+                float n_ = 0.142857142857;
+                vec3  ns = n_ * D.wyz - D.xzx;
+                vec4 j = p - 49.0 * floor(p * ns.z * ns.z);
+                vec4 x_ = floor(j * ns.z);
+                vec4 y_ = floor(j - 7.0 * x_ );
+                vec4 x = x_ *ns.x + ns.yyyy;
+                vec4 y = y_ *ns.x + ns.yyyy;
+                vec4 h = 1.0 - abs(x) - abs(y);
+                vec4 b0 = vec4( x.xy, y.xy );
+                vec4 b1 = vec4( x.zw, y.zw );
+                vec4 s0 = floor(b0)*2.0 + 1.0;
+                vec4 s1 = floor(b1)*2.0 + 1.0;
+                vec4 sh = -step(h, vec4(0.0));
+                vec4 a0 = b0.xzyw + s0.xzyw*sh.xxyy ;
+                vec4 a1 = b1.xzyw + s1.xzyw*sh.zzww ;
+                vec3 p0 = vec3(a0.xy,h.x);
+                vec3 p1 = vec3(a0.zw,h.y);
+                vec3 p2 = vec3(a1.xy,h.z);
+                vec3 p3 = vec3(a1.zw,h.w);
+                vec4 norm = taylorInvSqrt(vec4(dot(p0,p0), dot(p1,p1), dot(p2,p2), dot(p3,p3)));
+                p0 *= norm.x; p1 *= norm.y; p2 *= norm.z; p3 *= norm.w;
+                vec4 m = max(0.6 - vec4(dot(x0,x0), dot(x1,x1), dot(x2,x2), dot(x3,x3)), 0.0);
+                m = m * m;
+                return 42.0 * dot( m*m, vec4( dot(p0,x0), dot(p1,x1), dot(p2,x2), dot(p3,x3) ) );
+            }
+        `;
+
+        // ==========================================
+        // BLACK HOLE CORE
+        // ==========================================
+        const coreGroup = new THREE.Group();
+        scene.add(coreGroup);
+
+        // Sphere hitam di tengah
+        const bhMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
+        const bhGeo = new THREE.SphereGeometry(4, 64, 64);
+        coreGroup.add(new THREE.Mesh(bhGeo, bhMat));
+
+        // Aura/cincin cahaya
+        const auraMat = new THREE.ShaderMaterial({
+            uniforms: { uTime: { value: 0 }, uIntensity: { value: 1.0 } },
+            vertexShader: `
+                varying vec3 vNormal;
+                varying vec3 vView;
+                void main() {
+                    vNormal = normalize(normalMatrix * normal);
+                    vView = normalize(-(modelViewMatrix * vec4(position, 1.0)).xyz);
+                    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+                }
+            `,
+            fragmentShader: `
+                uniform float uIntensity;
+                varying vec3 vNormal;
+                varying vec3 vView;
+                void main() {
+                    float rim = pow(1.0 - max(dot(vNormal, vView), 0.0), 4.0);
+                    gl_FragColor = vec4(vec3(1.0, 0.45, 0.1) * rim * uIntensity * 5.0, 1.0);
+                }
+            `,
+            side: THREE.BackSide, transparent: true, blending: THREE.AdditiveBlending
+        });
+        coreGroup.add(new THREE.Mesh(new THREE.SphereGeometry(4.25, 64, 64), auraMat));
+
+        // ==========================================
+        // ACCRETION DISK
+        // ==========================================
+        const instanceCount = 5000;
+        const streakGeo = new THREE.CylinderGeometry(0.01, 0.12, 2.2, 3);
+        streakGeo.rotateX(Math.PI / 2);
+        
+        const diskMaterial = new THREE.ShaderMaterial({
+            uniforms: {
+                uTime: { value: 0 },
+                uMorph: { value: 0.1 },
+                uCompression: { value: 1.0 },
+                uIntensity: { value: 1.0 },
+                uOrbitScale: { value: 1.0 }
+            },
+            vertexShader: `
+                ${noiseChunk}
+                uniform float uTime;
+                uniform float uMorph;
+                uniform float uCompression;
+                uniform float uIntensity;
+                uniform float uOrbitScale;
+                varying vec3 vColor;
+                varying float vOpacity;
+                void main() {
+                    vec4 instPos = instanceMatrix * vec4(0.0, 0.0, 0.0, 1.0);
+                    float rOriginal = length(instPos.xz);
+                    float r = rOriginal * uCompression;
+                    float initialAngle = atan(instPos.z, instPos.x);
+                    float orbitalVelocity = (1.5 / sqrt(rOriginal)) * uOrbitScale;
+                    float currentAngle = initialAngle + (uTime * orbitalVelocity);
+                    vec3 morphedWorldPos = vec3(cos(currentAngle) * r, instPos.y, sin(currentAngle) * r);
+                    float noise = snoise(vec3(morphedWorldPos.x * 0.08, morphedWorldPos.z * 0.08, uTime * 0.3));
+                    morphedWorldPos.y += noise * uMorph * 4.0;
+                    vec3 viewDir = normalize(cameraPosition - morphedWorldPos);
+                    vec3 orbitDir = normalize(vec3(-sin(currentAngle), 0.0, cos(currentAngle)));
+                    float doppler = dot(orbitDir, viewDir);
+                    vec3 hot = vec3(1.0, 0.95, 0.9);
+                    vec3 warm = vec3(1.0, 0.45, 0.1);
+                    vec3 cool = vec3(0.1, 0.35, 1.0);
+                    vec3 color = mix(cool, warm, smoothstep(45.0, 12.0, r));
+                    color = mix(color, hot, smoothstep(10.0, 4.0, r));
+                    vColor = color * (1.3 + doppler * 0.7) * uIntensity;
+                    vOpacity = (smoothstep(3.8, 5.5, r) * (1.0 - smoothstep(38.0, 48.0, r))) * 0.8;
+                    float deltaAngle = currentAngle - initialAngle;
+                    float c = cos(deltaAngle);
+                    float s = sin(deltaAngle);
+                    mat3 rotY = mat3(
+                        c, 0, s,
+                        0, 1, 0,
+                       -s, 0, c
+                    );
+                    vec3 localPos = (instanceMatrix * vec4(position, 0.0)).xyz;
+                    vec3 rotatedLocalPos = rotY * localPos;
+                    gl_Position = projectionMatrix * viewMatrix * vec4(morphedWorldPos + rotatedLocalPos, 1.0);
+                }
+            `,
+            fragmentShader: `
+                varying vec3 vColor;
+                varying float vOpacity;
+                void main() {
+                    gl_FragColor = vec4(vColor, vOpacity);
+                }
+            `,
+            transparent: true, blending: THREE.AdditiveBlending, depthWrite: false
+        });
+
+        const instancedDisk = new THREE.InstancedMesh(streakGeo, diskMaterial, instanceCount);
+        const dummy = new THREE.Object3D();
+
+        for (let i = 0; i < instanceCount; i++) {
+            const r = 5 + Math.pow(Math.random(), 1.3) * 40;
+            const angle = Math.random() * Math.PI * 2;
+            dummy.position.set(Math.cos(angle) * r, (Math.random() - 0.5) * (8 / r), Math.sin(angle) * r);
+            dummy.lookAt(dummy.position.x + Math.sin(angle), dummy.position.y, dummy.position.z - Math.cos(angle));
+            dummy.updateMatrix();
+            instancedDisk.setMatrixAt(i, dummy.matrix);
+        }
+        scene.add(instancedDisk);
+
+        // ==========================================
+        // STATE TRANSITIONS
+        // ==========================================
+        const config = [
+            { 
+                morph: 0.1, compress: 1.0, intensity: 1.0, rotate: 0.4, orbit: 1.0
+            },
+            { 
+                morph: 4.5, compress: 1.15, intensity: 1.4, rotate: 1.5, orbit: 1.8
+            },
+            { 
+                morph: 0.8, compress: 0.38, intensity: 3.5, rotate: 5.0, orbit: 4.5
+            }
+        ];
+
+        let stateIdx = 0;
+
+        function transition() {
+            stateIdx = (stateIdx + 1) % config.length;
+            const s = config[stateIdx];
+            const tl = gsap.timeline({ defaults: { duration: 4.0, ease: "power2.inOut" } });
+            tl.to(diskMaterial.uniforms.uMorph, { value: s.morph }, 0);
+            tl.to(diskMaterial.uniforms.uCompression, { value: s.compress }, 0);
+            tl.to(diskMaterial.uniforms.uIntensity, { value: s.intensity }, 0);
+            tl.to(diskMaterial.uniforms.uOrbitScale, { value: s.orbit }, 0);
+            tl.to(auraMat.uniforms.uIntensity, { value: s.intensity }, 0);
+            tl.to(controls, { autoRotateSpeed: s.rotate }, 0);
+        }
+
+        setInterval(transition, 10000);
+
+        // ==========================================
+        // ANIMATION LOOP
+        // ==========================================
+        const clock = new THREE.Clock();
+
+        function animate() {
+            const time = clock.getElapsedTime();
+            diskMaterial.uniforms.uTime.value = time;
+            auraMat.uniforms.uTime.value = time;
+            instancedDisk.rotation.y += 0.0005;
+            controls.update();
+            renderer.render(scene, camera);
+            requestAnimationFrame(animate);
+        }
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        animate();
+    </script>
+
+    <!-- ========================================== -->
+    <!-- MATRIX RAIN & TIMER -->
+    <!-- ========================================== -->
+    <script>
+        // ==========================================
+        // MATRIX RAIN - PINK
+        // ==========================================
+        const canvas = document.getElementById('matrixCanvas');
+        const ctx = canvas.getContext('2d');
+
+        let w = window.innerWidth;
+        let h = window.innerHeight;
+        canvas.width = w;
+        canvas.height = h;
+
+        const matrixText = 'HAPPYBIRTHDAY'.split('');
+        const color1 = '#ff69b4';
+        const color2 = '#ff1493';
+
+        const cols = Math.floor(w / 20);
+        const drops = [];
+
+        for (let i = 0; i < cols; i++) {
+            drops[i] = {
+                y: Math.random() * h,
+                speed: 1.5 + Math.random() * 3.5,
+                char: matrixText[Math.floor(Math.random() * matrixText.length)],
+                length: 4 + Math.floor(Math.random() * 16),
+                changeTimer: 0,
+                changeInterval: 5 + Math.floor(Math.random() * 20)
+            };
+        }
+
+        function drawMatrix() {
+            ctx.fillStyle = 'rgba(10, 10, 10, 0.06)';
+            ctx.fillRect(0, 0, w, h);
+
+            ctx.font = '18px "Courier New", monospace';
+            ctx.textAlign = 'center';
+
+            for (let i = 0; i < drops.length; i++) {
+                const drop = drops[i];
+                const x = i * 20 + 10;
+
+                const gradient = ctx.createLinearGradient(x, drop.y - 20, x, drop.y);
+                gradient.addColorStop(0, color1);
+                gradient.addColorStop(1, color2);
+
+                const opacity = 0.4 + Math.random() * 0.6;
+                ctx.globalAlpha = opacity;
+                ctx.fillStyle = gradient;
+                ctx.fillText(drop.char, x, drop.y);
+                ctx.globalAlpha = 1;
+
+                for (let j = 1; j < drop.length; j++) {
+                    const prevY = drop.y - j * 18;
+                    if (prevY > 0) {
+                        const trailOpacity = 0.02 + (1 - j / drop.length) * 0.15;
+                        const r = 255 - (j / drop.length) * 200;
+                        const g = 105 - (j / drop.length) * 105;
+                        const b = 180 - (j / drop.length) * 180;
+                        ctx.globalAlpha = trailOpacity;
+                        ctx.fillStyle = `rgb(${r}, ${g}, ${b})`;
+                        ctx.fillText(drop.char, x, prevY);
+                        ctx.globalAlpha = 1;
+                    }
+                }
+
+                drop.y += drop.speed;
+
+                if (drop.y > h + 20) {
+                    drop.y = -20;
+                    drop.char = matrixText[Math.floor(Math.random() * matrixText.length)];
+                    drop.speed = 1.5 + Math.random() * 3.5;
+                    drop.length = 4 + Math.floor(Math.random() * 16);
+                }
+
+                drop.changeTimer++;
+                if (drop.changeTimer > drop.changeInterval) {
+                    drop.changeTimer = 0;
+                    drop.changeInterval = 5 + Math.floor(Math.random() * 20);
+                    if (Math.random() < 0.3) {
+                        drop.char = matrixText[Math.floor(Math.random() * matrixText.length)];
+                    }
+                }
+            }
+
+            requestAnimationFrame(drawMatrix);
+        }
+
+        window.addEventListener('resize', () => {
+            w = window.innerWidth;
+            h = window.innerHeight;
+            canvas.width = w;
+            canvas.height = h;
+        });
+
+        drawMatrix();
+
+        // ==========================================
+        // TIMER COUNTDOWN
+        // ==========================================
+
+        // ===== SET TARGET WAKTU DI SINI =====
+        const targetDate = new Date(2026, 5, 21, 0, 0, 0); // 20 Juni 2026, 00:00:00
+        // =====================================
+
+        const timerOverlay = document.getElementById('timerOverlay');
+        const mainContent = document.getElementById('mainContent');
+        const matrixCanvas = document.getElementById('matrixCanvas');
+        const blackHoleContainer = document.getElementById('blackHoleCanvas');
+
+        const options = { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' };
+        document.getElementById('targetDateText').textContent = targetDate.toLocaleDateString('id-ID', options);
+
+        function updateTimer() {
+            const now = new Date().getTime();
+            const target = targetDate.getTime();
+            const diff = target - now;
+
+            if (diff <= 0) {
+                // Sembunyiin timer + black hole
+                timerOverlay.classList.add('hidden');
+                if (blackHoleContainer) blackHoleContainer.style.display = 'none';
+                
+                // Tampilin matrix + konten
+                matrixCanvas.classList.add('show');
+                mainContent.classList.add('show');
+                
+                clearInterval(timerInterval);
+                return;
+            }
+
+            const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+            const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+            document.getElementById('days').textContent = String(days).padStart(2, '0');
+            document.getElementById('hours').textContent = String(hours).padStart(2, '0');
+            document.getElementById('minutes').textContent = String(minutes).padStart(2, '0');
+            document.getElementById('seconds').textContent = String(seconds).padStart(2, '0');
+
+            const totalDuration = target - new Date(2026, 5, 19, 0, 0, 0).getTime();
+            const elapsed = totalDuration - diff;
+            const progress = Math.min((elapsed / totalDuration) * 100, 100);
+
+            document.getElementById('progressFill').style.width = progress + '%';
+            document.getElementById('progressText').textContent =
+                `Menunggu ${days} hari ${hours} jam ${minutes} menit lagi... 💗`;
+        }
+
+        const timerInterval = setInterval(updateTimer, 1000);
+        updateTimer();
+    </script>
+
+</body>
+</html>
